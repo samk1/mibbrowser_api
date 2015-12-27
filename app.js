@@ -17,6 +17,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser());
 
+app.use(function (req, res, next) {
+    res.set('Access-Control-Allow-Origin', '*');
+    next();
+});
+
 app.use('/_api', api);
 
 // catch 404 and forward to error handler

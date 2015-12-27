@@ -18,6 +18,12 @@ router.param('oid', function (req, res, next, oid) {
     next();
 });
 
+router.options(/.*/, function(req, res) {
+    res.set('Access-Control-Allow-Methods', 'GET, PUT');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    res.send();
+});
+
 router.get('/smimanager', function(req, res) {
     var id = req.app.locals.mgr.newSmiManager();
 
@@ -84,6 +90,40 @@ router.put('/smimanager/:id/loadAll', function(req, res) {
     res.json({modules});
 });
 
+router.put('/smimanager/:id/nodes/bulk', function (req, res) {
+    if(!req.body.oids) {
+        throw new Error('bad request');
+    }
+
+    var nodes = [];
+
+    // return response nodes in same order as request oids
+    req.body.oids.forEach(function (oid) {
+        var node = req.smiManager.findNode(oid);
+        var nodeJson = null;
+
+        if (node) {
+            var childIdentifiers = [];
+            var childDescriptors = [];
+
+            node.childIdentifiers.forEach((v, k) => childIdentifiers.push(k));
+            node.childDescriptors.forEach((v, k) => childDescriptors.push(k));
+
+            nodeJson = {
+                module: node.moduleName,
+                identifier: node.identifier,
+                descriptor: node.descriptor,
+                childIdentifiers: childIdentifiers,
+                childDescriptors: childDescriptors
+            };
+        }
+
+        nodes.push(nodeJson)
+    });
+
+    res.json({nodes});
+});
+
 router.get('/smimanager/:id/objects/:oid', function(req, res) {
     var object = req.smiManager.getObject(req.oid);
     var macros = new Map([
@@ -118,7 +158,7 @@ router.get('/smimanager/:id/objects/:oid', function(req, res) {
 router.get('/modules', function (req, res) {
     var modules = [];
 
-    app.locals.modules.forEach(v => modules.push(v));
+    req.app.locals.modules.forEach((v, k) => modules.push(k));
 
     res.json({modules});
 });

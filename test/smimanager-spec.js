@@ -160,7 +160,7 @@ describe('smimanager endpoint', function() {
         });
     });
 
-    describe("GET /smimanager/:id/objects/:oid", function () {
+    describe("GET /_api/smimanager/:id/objects/:oid", function () {
         var id;
         var oid = 'mib-2.ifMIB';
         var smiManager;
@@ -207,5 +207,69 @@ describe('smimanager endpoint', function() {
             })
             .end(done);
         });
+    });
+
+    describe("PUT /_api/smimanager/:id/nodes/bulk", function() {
+        var id;
+        var oids = [
+            ['mib-2', 'interfaces', 'ifTable', 'ifEntry', 'ifInOctets'],
+            ['mib-2', 'interfaces', 'ifTable', 'ifEntry', 'ifOutOctets']
+        ];
+        var smiManager;
+
+        beforeEach(function () {
+            app.locals.mgr.clear();
+            id = app.locals.mgr.newSmiManager();
+            smiManager = app.locals.mgr.getSmiManager(id);
+            smiManager.compileMibSync(app.locals.modules.get('IF-MIB'));
+        });
+
+        it("should return two nodes in the response body", function (done) {
+            request(app)
+            .put(`/_api/smimanager/${id}/nodes/bulk`)
+            .send({oids})
+            .expect(function (res) {
+                expect(res.body.nodes.length).toEqual(2)
+            })
+            .end(done);
+        });
+
+        it("should return correct request body", function (done) {
+            request(app)
+                .put(`/_api/smimanager/${id}/nodes/bulk`)
+                .send({oids})
+                .expect(function (res) {
+                    expect(res.body.nodes).toEqual([
+                        {
+                            "module": "IF-MIB",
+                            "identifier": 10,
+                            "descriptor": "ifInOctets",
+                            "childIdentifiers": [],
+                            "childDescriptors": []
+                        },
+                        {
+                            "module": "IF-MIB",
+                            "identifier": 16,
+                            "descriptor": "ifOutOctets",
+                            "childIdentifiers": [],
+                            "childDescriptors": []
+                        }
+                    ])
+                })
+                .end(done);
+        })
     })
+});
+
+describe("modules endpoint", function() {
+    describe("GET /_api/modules", function () {
+        it("Should return the full list of modules", function (done) {
+            request(app)
+                .get('/_api/modules')
+                .expect(function (res) {
+                    expect(res.body.modules).toExist();
+                })
+                .end(done);
+        });
+    });
 });
